@@ -1,0 +1,48 @@
+{
+  "categories": {
+    "AI": {
+      "weight": 1.4,
+      "keywords": [
+        "ai", "agent", "agents", "brain", "bot", "bots", "model", "prompt", "neural",
+        "mind", "deep", "synth", "logic", "vision", "voice", "chat", "omni",
+        "cortex", "cogni", "intel", "tensor", "vector", "embed", "llm"
+      ]
+    },
+    "Fintech": {
+      "weight": 1.35,
+      "keywords": [
+        "pay", "coin", "token", "tokens", "vault", "cash", "bank", "fund", "funds",
+        "fin", "flow", "wallet", "yield", "credit", "lend", "rate", "rates",
+        "crypto", "swap", "ledger", "mint", "tx", "capital", "vest"
+      ]
+    },
+    "Cybersecurity": {
+      "weight": 1.3,
+      "keywords": [
+        "shield", "guard", "secure", "safe", "lock", "auth", "cipher", "key",
+        "defend", "trace", "tcha", "probe", "wall", "gate", "sentinel", "armor"
+      ]
+    },
+    "Cloud & Infrastructure": {
+      "weight": 1.25,
+      "keywords": [
+        "cloud", "data", "stack", "sync", "grid", "core", "ops", "scale",
+        "mesh", "node", "nodes", "cluster", "host", "pipe", "stream", "base", "hub"
+      ]
+    },
+    "DevTools": {
+      "weight": 1.2,
+      "keywords": [
+        "code", "dev", "run", "build", "git", "test", "fast", "dash", "tool",
+        "tools", "kit", "forge", "craft", "link", "ship", "desk", "deploy"
+      ]
+    },
+    "Brandable Power": {
+      "weight": 1.15,
+      "keywords": [
+        "apex", "pulse", "spark", "nexus", "quantum", "zenith", "hyper", "vortex",
+        "echo", "strata", "orbit", "prime", "nova", "atlas", "stride", "drift"
+      ]
+    }
+  }
+}
