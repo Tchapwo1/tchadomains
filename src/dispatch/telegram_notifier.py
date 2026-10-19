@@ -1,0 +1,157 @@
+"""
+TchaDomains Telegram Alert Notifier
+Formats and dispatches high-priority domain drop alerts via Telegram Bot API.
+"""
+
+import os
+import logging
+from datetime import date
+from typing import List, Dict, Optional, Any
+import httpx
+
+logger = logging.getLogger("tchadomains.telegram")
+
+def build_registrar_links(domain: str) -> str:
+    """Generates direct 1-click registration/lookup links."""
+    namecheap_url = f"https://www.namecheap.com/domains/registration/results/?domain={domain}"
+    dynadot_url = f"https://www.dynadot.com/domain/search.html?domain={domain}"
+    return f"[Namecheap]({namecheap_url}) • [Dynadot]({dynadot_url})"
+
+def format_telegram_message(
+    ai_domains: List[Dict[str, Any]],
+    fintech_domains: List[Dict[str, Any]],
+    drop_date: Optional[str] = None
+) -> str:
+    """
+    Constructs a scannable, rich Markdown alert for Telegram.
+    Separates drops into AI and Fintech clusters with score badges and 1-click links.
+    """
+    drop_date_str = drop_date or str(date.today())
+    total_count = len(ai_domains) + len(fintech_domains)
+
+    lines = [
+        "⚡ *TchaDomains • Daily Alpha Drops Dispatch*",
+        f"📅 *Drop Date:* `{drop_date_str}` | *Top {total_count} Opportunities*",
+        "Proprietary Alpha Score (0–100) based on syllable harmony, high-CPC buyer intent & TLD prestige.",
+        "",
+        "━━━━━━━━━━━━━━━━━━━━━━",
+        "🤖 *TOP AI & AGENT INFRASTRUCTURE DROPS*",
+        "━━━━━━━━━━━━━━━━━━━━━━"
+    ]
+
+    if not ai_domains:
+        lines.append("_(No high-conviction AI drops meeting alpha threshold today)_")
+    else:
+        for i, d in enumerate(ai_domains, 1):
+            name = d.get("domain_name", "")
+            score = d.get("alpha_score", 0.0)
+            chars = d.get("char_length", len(name.split(".")[0]))
+            words = d.get("detected_words", "")
+            if isinstance(words, list):
+                words = " + ".join(words)
+            elif not words:
+                words = "single/brandable"
+            else:
+                words = words.replace(",", " + ")
+
+            links = build_registrar_links(name)
+            lines.append(f"*{i}.* `{name}` — *[{score:.1f}/100]*")
+            lines.append(f"   ↳ {chars} chars | Structure: _{words}_")
+            lines.append(f"   ↳ Quick Bid: {links}")
+            lines.append("")
+
+    lines.extend([
+        "━━━━━━━━━━━━━━━━━━━━━━",
+        "💳 *TOP FINTECH & FINANCIAL RAILS DROPS*",
+        "━━━━━━━━━━━━━━━━━━━━━━"
+    ])
+
+    if not fintech_domains:
+        lines.append("_(No high-conviction Fintech drops meeting alpha threshold today)_")
+    else:
+        for i, d in enumerate(fintech_domains, 1):
+            name = d.get("domain_name", "")
+            score = d.get("alpha_score", 0.0)
+            chars = d.get("char_length", len(name.split(".")[0]))
+            words = d.get("detected_words", "")
+            if isinstance(words, list):
+                words = " + ".join(words)
+            elif not words:
+                words = "single/brandable"
+            else:
+                words = words.replace(",", " + ")
+
+            links = build_registrar_links(name)
+            lines.append(f"*{i}.* `{name}` — *[{score:.1f}/100]*")
+            lines.append(f"   ↳ {chars} chars | Structure: _{words}_")
+            lines.append(f"   ↳ Quick Bid: {links}")
+            lines.append("")
+
+    lines.extend([
+        "━━━━━━━━━━━━━━━━━━━━━━",
+        "💡 *Tcha Tip:* Domains drop between 18:00–20:00 UTC (Verisign cycle).",
+        "🔗 *Live Radar:* http://localhost:5520"
+    ])
+
+    return "\n".join(lines)
+
+def send_telegram_alert(
+    message: str,
+    bot_token: Optional[str] = None,
+    chat_id: Optional[str] = None,
+    dry_run: bool = False
+) -> Dict[str, Any]:
+    """
+    Dispatches alert to Telegram chat via Bot API.
+    Supports dry-run testing and environment variable fallback.
+    """
+    token = bot_token or os.getenv("TELEGRAM_BOT_TOKEN")
+    chat = chat_id or os.getenv("TELEGRAM_CHAT_ID")
+
+    if dry_run or not token or not chat:
+        reason = "dry_run mode active" if dry_run else "missing TELEGRAM_BOT_TOKEN or TELEGRAM_CHAT_ID"
+        logger.info(f"[Telegram Dispatch (Simulated)]: {reason}")
+        return {
+            "channel": "telegram",
+            "delivered": True,
+            "simulated": True,
+            "reason": reason,
+            "message_length": len(message),
+            "preview": message[:200] + "..." if len(message) > 200 else message
+        }
+
+    url = f"https://api.telegram.org/bot{token}/sendMessage"
+    payload = {
+        "chat_id": chat,
+        "text": message,
+        "parse_mode": "Markdown",
+        "disable_web_page_preview": True
+    }
+
+    try:
+        with httpx.Client(timeout=10.0) as client:
+            resp = client.post(url, json=payload)
+            if resp.status_code == 200:
+                data = resp.json()
+                return {
+                    "channel": "telegram",
+                    "delivered": True,
+                    "simulated": False,
+                    "message_id": data.get("result", {}).get("message_id")
+                }
+            else:
+                return {
+                    "channel": "telegram",
+                    "delivered": False,
+                    "simulated": False,
+                    "status_code": resp.status_code,
+                    "error": resp.text
+                }
+    except Exception as e:
+        logger.error(f"Telegram dispatch failed: {str(e)}")
+        return {
+            "channel": "telegram",
+            "delivered": False,
+            "simulated": False,
+            "error": str(e)
+        }

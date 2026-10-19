@@ -12,6 +12,7 @@ from rich.text import Text
 
 from src.db.storage import DomainStore
 from src.core.ingest import IngestPipeline
+from src.dispatch.alert_dispatcher import run_daily_dispatch
 
 import sys
 if sys.platform == "win32":
@@ -38,6 +39,8 @@ def run_cli():
     parser.add_argument("--max-len", type=int, default=10, help="Maximum SLD character length")
     parser.add_argument("--category", type=str, default="all", help="Filter by category (AI, Fintech, DevTools, all)")
     parser.add_argument("--seed-benchmark", action="store_true", help="Ingest a 50,000 domain test drop stream")
+    parser.add_argument("--dispatch", choices=["both", "telegram", "email"], default=None, help="Trigger automated daily top 10 dispatch")
+    parser.add_argument("--dry-run", action="store_true", help="Run dispatch without sending live API/SMTP requests")
 
     args = parser.parse_args()
     store = DomainStore()
@@ -57,6 +60,24 @@ def run_cli():
             title="[bold yellow]TchaDomains Telemetry[/bold yellow]",
             border_style="yellow"
         ))
+
+    if args.dispatch:
+        console.print(f"[bold cyan]>> Triggering Automated Top 10 Drops Dispatch ({args.dispatch})...[/bold cyan]")
+        res = run_daily_dispatch(
+            channel=args.dispatch,
+            dry_run=args.dry_run,
+            store=store
+        )
+        sim_note = " (Simulated)" if args.dry_run else ""
+        console.print(Panel(
+            f"[bold green][OK] Dispatch Processed in {res['duration_ms']}ms!{sim_note}[/bold green]\n"
+            f"- AI Drops: [bold]{res['ai_count']}[/bold]\n"
+            f"- Fintech Drops: [bold]{res['fintech_count']}[/bold]\n"
+            f"- Channels: [bold cyan]{', '.join(res['channels'].keys())}[/bold cyan]",
+            title="[bold yellow]Tcha Alert Dispatcher[/bold yellow]",
+            border_style="green"
+        ))
+        return
 
     results = store.query_top_alpha(
         limit=args.limit,

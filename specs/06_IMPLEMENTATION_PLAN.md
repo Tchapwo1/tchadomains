@@ -53,8 +53,19 @@
 
 ---
 
-### Milestone 7: Automated Test Suite & Verification
+### Milestone 7: Automated Test Suite & Verification (COMPLETED)
 - **Tasks**:
   1. Author `tests/test_filter.py`, `tests/test_tokenizer.py`, `tests/test_scorer.py`, `tests/test_storage.py`.
   2. Verify performance budgets: Total RAM $<80$ MB, scoring throughput $>40,000$ names/sec.
 - **Definition of Done**: 100% of test suites pass cleanly in $<1.0$ second.
+
+---
+
+### Milestone 8: Automated Daily Alpha Drops Dispatcher (Telegram & Email) (COMPLETED)
+- **Tasks**:
+  1. Author `src/dispatch/telegram_notifier.py`: High-priority Telegram alert bot with rich Markdown formatting, Alpha badges, and 1-click registrar lookup URLs. (Done)
+  2. Author `src/dispatch/email_dispatcher.py`: Museum-grade dark-mode responsive HTML email newsletter template (*The Daily Tcha*) with tabular valuation metrics and SMTP/TLS delivery. (Done)
+  3. Author `src/dispatch/alert_dispatcher.py`: Pipeline coordinator extracting top 5 AI + top 5 Fintech alpha drops from DuckDB, executing dual dispatch. (Done)
+  4. Author CLI runner with `--channel [both|telegram|email]` and `--dry-run` modes. (Done)
+  5. Author `tests/test_dispatcher.py` to verify formatting, payload assembly, and mock dispatch delivery. (Done)
+- **Definition of Done**: Automated dispatch generates verified Telegram & Email dispatches for Top 10 AI/Fintech drops in $<500$ms. (Achieved: 454ms)
