@@ -21,7 +21,11 @@ if hasattr(sys.stdout, "reconfigure"):
 
 from src.db.storage import DomainStore
 from src.core.ingest import IngestPipeline
-from src.dispatch.telegram_notifier import format_telegram_message, send_telegram_alert
+from src.dispatch.telegram_notifier import (
+    format_telegram_message,
+    build_inline_keyboard,
+    send_telegram_alert
+)
 from src.dispatch.email_dispatcher import generate_html_newsletter, send_email_dispatch
 
 def ensure_candidate_inventory(store: DomainStore, min_required: int = 5) -> None:
@@ -98,7 +102,12 @@ def run_daily_dispatch(
 
     # 4. Dispatch Telegram
     if channel in ("both", "telegram"):
-        tg_res = send_telegram_alert(message=telegram_msg, dry_run=dry_run)
+        keyboard = build_inline_keyboard(top_ai, top_fintech)
+        tg_res = send_telegram_alert(
+            message=telegram_msg,
+            reply_markup=keyboard,
+            dry_run=dry_run
+        )
         results["channels"]["telegram"] = tg_res
         sim_badge = " [SIMULATED]" if tg_res.get("simulated") else ""
         print(f"[AlertDispatcher] Telegram dispatch: {'SUCCESS' if tg_res.get('delivered') else 'FAILED'}{sim_badge}")

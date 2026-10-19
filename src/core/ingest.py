@@ -8,7 +8,7 @@ import time
 import random
 from datetime import date
 from pathlib import Path
-from typing import List, Dict, Tuple
+from typing import List, Dict, Tuple, Optional
 import httpx
 
 from src.core.filter_engine import FilterEngine
@@ -62,6 +62,15 @@ class IngestPipeline:
             "throughput_domains_per_sec": round(raw_count / max(0.001, total_time)),
             "top_gem": alpha_gems[0]["domain_name"] if alpha_gems else None
         }
+
+    def sync_daily_drops(self, drop_date: Optional[date] = None, force_refresh: bool = False) -> Dict:
+        """
+        Pulls the live or cached dropping feed for the date, parses, scores, and updates DuckDB.
+        """
+        from src.core.drop_stream import fetch_daily_drops
+        target_date = drop_date or date.today()
+        raw_stream = fetch_daily_drops(target_date=target_date, force_refresh=force_refresh)
+        return self.process_domain_list(raw_stream, drop_date=target_date)
 
     def generate_benchmark_feed(self, count: int = 50000) -> List[str]:
         """

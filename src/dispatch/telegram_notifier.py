@@ -7,15 +7,86 @@ import os
 import logging
 from datetime import date
 from typing import List, Dict, Optional, Any
+from pathlib import Path
 import httpx
 
 logger = logging.getLogger("tchadomains.telegram")
+
+def load_env_file():
+    """Reads .env file from project root if present."""
+    env_path = Path(".env")
+    if env_path.exists():
+        for line in env_path.read_text(encoding="utf-8").splitlines():
+            line = line.strip()
+            if line and not line.startswith("#") and "=" in line:
+                key, val = line.split("=", 1)
+                key = key.strip()
+                val = val.strip().strip('"').strip("'")
+                if key and key not in os.environ:
+                    os.environ[key] = val
 
 def build_registrar_links(domain: str) -> str:
     """Generates direct 1-click registration/lookup links."""
     namecheap_url = f"https://www.namecheap.com/domains/registration/results/?domain={domain}"
     dynadot_url = f"https://www.dynadot.com/domain/search.html?domain={domain}"
     return f"[Namecheap]({namecheap_url}) • [Dynadot]({dynadot_url})"
+
+def build_inline_keyboard(
+    ai_domains: List[Dict[str, Any]],
+    fintech_domains: List[Dict[str, Any]]
+) -> Dict[str, Any]:
+    """
+    Constructs Telegram inline buttons for 1-click bidding and 1-tap DuckDB watchlisting.
+    """
+    keyboard = []
+
+    # Top AI #1
+    if ai_domains:
+        d = ai_domains[0]
+        name = d.get("domain_name", "")
+        bid_url = f"https://www.namecheap.com/domains/registration/results/?domain={name}"
+        keyboard.append([
+            {"text": f"⚡ Bid {name}", "url": bid_url},
+            {"text": f"⭐ Save {name}", "callback_data": f"watch:{name}"}
+        ])
+
+    # Top Fintech #1
+    if fintech_domains:
+        d = fintech_domains[0]
+        name = d.get("domain_name", "")
+        bid_url = f"https://www.namecheap.com/domains/registration/results/?domain={name}"
+        keyboard.append([
+            {"text": f"💳 Bid {name}", "url": bid_url},
+            {"text": f"⭐ Save {name}", "callback_data": f"watch:{name}"}
+        ])
+
+    # Top AI #2
+    if len(ai_domains) > 1:
+        d = ai_domains[1]
+        name = d.get("domain_name", "")
+        bid_url = f"https://www.namecheap.com/domains/registration/results/?domain={name}"
+        keyboard.append([
+            {"text": f"🤖 Bid {name}", "url": bid_url},
+            {"text": f"⭐ Save {name}", "callback_data": f"watch:{name}"}
+        ])
+
+    # Top Fintech #2
+    if len(fintech_domains) > 1:
+        d = fintech_domains[1]
+        name = d.get("domain_name", "")
+        bid_url = f"https://www.namecheap.com/domains/registration/results/?domain={name}"
+        keyboard.append([
+            {"text": f"💎 Bid {name}", "url": bid_url},
+            {"text": f"⭐ Save {name}", "callback_data": f"watch:{name}"}
+        ])
+
+    # Universal actions
+    keyboard.append([
+        {"text": "📋 My Watchlist", "callback_data": "cmd:watchlist"},
+        {"text": "🔄 Refresh Top 10", "callback_data": "cmd:refresh"}
+    ])
+
+    return {"inline_keyboard": keyboard}
 
 def format_telegram_message(
     ai_domains: List[Dict[str, Any]],
@@ -99,12 +170,14 @@ def send_telegram_alert(
     message: str,
     bot_token: Optional[str] = None,
     chat_id: Optional[str] = None,
+    reply_markup: Optional[Dict[str, Any]] = None,
     dry_run: bool = False
 ) -> Dict[str, Any]:
     """
     Dispatches alert to Telegram chat via Bot API.
-    Supports dry-run testing and environment variable fallback.
+    Supports dry-run testing, inline keyboards, and environment variable fallback.
     """
+    load_env_file()
     token = bot_token or os.getenv("TELEGRAM_BOT_TOKEN")
     chat = chat_id or os.getenv("TELEGRAM_CHAT_ID")
 
@@ -116,6 +189,7 @@ def send_telegram_alert(
             "delivered": True,
             "simulated": True,
             "reason": reason,
+            "has_keyboard": bool(reply_markup),
             "message_length": len(message),
             "preview": message[:200] + "..." if len(message) > 200 else message
         }
@@ -127,6 +201,8 @@ def send_telegram_alert(
         "parse_mode": "Markdown",
         "disable_web_page_preview": True
     }
+    if reply_markup:
+        payload["reply_markup"] = reply_markup
 
     try:
         with httpx.Client(timeout=10.0) as client:

@@ -9,9 +9,23 @@ import logging
 from datetime import date
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
+from pathlib import Path
 from typing import List, Dict, Optional, Any
 
 logger = logging.getLogger("tchadomains.email")
+
+def load_env_file():
+    """Reads .env file from project root if present."""
+    env_path = Path(".env")
+    if env_path.exists():
+        for line in env_path.read_text(encoding="utf-8").splitlines():
+            line = line.strip()
+            if line and not line.startswith("#") and "=" in line:
+                key, val = line.split("=", 1)
+                key = key.strip()
+                val = val.strip().strip('"').strip("'")
+                if key and key not in os.environ:
+                    os.environ[key] = val
 
 def _render_domain_rows(domains: List[Dict[str, Any]]) -> str:
     """Renders HTML table rows for domain items."""
@@ -197,6 +211,7 @@ def send_email_dispatch(
     Sends the HTML newsletter via SMTP with fallback text part.
     Supports dry-run testing and environment variable configurations.
     """
+    load_env_file()
     host = smtp_host or os.getenv("SMTP_HOST")
     port = smtp_port or int(os.getenv("SMTP_PORT", "587"))
     user = smtp_user or os.getenv("SMTP_USER")
