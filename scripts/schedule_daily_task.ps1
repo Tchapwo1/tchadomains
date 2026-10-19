@@ -4,7 +4,7 @@
 $TaskName = "TchaDomainsDailyAlphaDispatch"
 $PythonPath = (Get-Command python).Source
 $ProjectDir = "D:\Downloads\tchadomains"
-$ScriptArgs = "-m src.cli.radar_cli --dispatch telegram"
+$ScriptArgs = "-m src.cli.radar_cli --dispatch both"
 
 Write-Host "⚡ Registering Windows Scheduled Task: $TaskName..." -ForegroundColor Cyan
 

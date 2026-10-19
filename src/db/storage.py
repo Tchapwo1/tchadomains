@@ -12,11 +12,18 @@ from typing import List, Dict, Optional, Any
 DB_PATH = Path("data/tchadomains.duckdb")
 
 class DomainStore:
-    def __init__(self, db_path: Optional[Path] = None):
+    def __init__(self, db_path: Optional[Path] = None, read_only: bool = False):
         self.db_path = db_path or DB_PATH
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
-        self.conn = duckdb.connect(str(self.db_path))
-        self.init_schema()
+        try:
+            self.conn = duckdb.connect(str(self.db_path), read_only=read_only)
+            self.read_only = read_only
+            if not read_only:
+                self.init_schema()
+        except (duckdb.IOException, Exception):
+            # Fallback to read-only mode if write lock is held by another process
+            self.conn = duckdb.connect(str(self.db_path), read_only=True)
+            self.read_only = True
 
     def init_schema(self):
         """Creates the DuckDB tables as specified in Pillar 5."""

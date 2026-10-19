@@ -11,6 +11,7 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from pathlib import Path
 from typing import List, Dict, Optional, Any
+import httpx
 
 logger = logging.getLogger("tchadomains.email")
 
@@ -212,15 +213,17 @@ def send_email_dispatch(
     Supports dry-run testing and environment variable configurations.
     """
     load_env_file()
+    resend_key = os.getenv("RESEND_API_KEY")
+    recipient = to_email or os.getenv("DISPATCH_EMAIL_TO")
+    sender = from_email or os.getenv("DISPATCH_EMAIL_FROM", "onboarding@resend.dev")
+
     host = smtp_host or os.getenv("SMTP_HOST")
     port = smtp_port or int(os.getenv("SMTP_PORT", "587"))
     user = smtp_user or os.getenv("SMTP_USER")
     password = smtp_pass or os.getenv("SMTP_PASS")
-    recipient = to_email or os.getenv("DISPATCH_EMAIL_TO")
-    sender = from_email or os.getenv("DISPATCH_EMAIL_FROM", "alerts@tcha.dev")
 
-    if dry_run or not host or not recipient:
-        reason = "dry_run mode active" if dry_run else "missing SMTP_HOST or DISPATCH_EMAIL_TO"
+    if dry_run or (not resend_key and not host) or not recipient:
+        reason = "dry_run mode active" if dry_run else "missing RESEND_API_KEY or SMTP_HOST or DISPATCH_EMAIL_TO"
         logger.info(f"[Email Dispatch (Simulated)]: {reason}")
         return {
             "channel": "email",
@@ -232,6 +235,41 @@ def send_email_dispatch(
             "html_bytes": len(html_content.encode("utf-8"))
         }
 
+    # 1. Native Resend REST API (Highest reliability, sub-second delivery)
+    if resend_key:
+        try:
+            headers = {
+                "Authorization": f"Bearer {resend_key}",
+                "Content-Type": "application/json"
+            }
+            payload = {
+                "from": sender,
+                "to": [recipient],
+                "subject": subject,
+                "html": html_content
+            }
+            if text_content:
+                payload["text"] = text_content
+
+            with httpx.Client(timeout=10.0) as client:
+                resp = client.post("https://api.resend.com/emails", headers=headers, json=payload)
+                if resp.status_code in (200, 201):
+                    data = resp.json()
+                    return {
+                        "channel": "email",
+                        "provider": "resend",
+                        "delivered": True,
+                        "simulated": False,
+                        "email_id": data.get("id"),
+                        "recipient": recipient,
+                        "subject": subject
+                    }
+                else:
+                    logger.warning(f"Resend API error {resp.status_code}: {resp.text}. Falling back to SMTP if configured...")
+        except Exception as e:
+            logger.warning(f"Resend dispatch error: {e}. Falling back to SMTP if configured...")
+
+    # 2. Standard SMTP Fallback
     msg = MIMEMultipart("alternative")
     msg["Subject"] = subject
     msg["From"] = sender

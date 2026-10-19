@@ -30,10 +30,9 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(me
 logger = logging.getLogger("tchadomains.bot_daemon")
 
 class TelegramBotDaemon:
-    def __init__(self, token: Optional[str] = None, store: Optional[DomainStore] = None):
+    def __init__(self, token: Optional[str] = None):
         load_env_file()
         self.token = token or os.getenv("TELEGRAM_BOT_TOKEN")
-        self.store = store or DomainStore()
         self.offset = 0
         self.running = False
 
@@ -41,6 +40,10 @@ class TelegramBotDaemon:
             raise ValueError("TELEGRAM_BOT_TOKEN is required to run the bot daemon.")
 
         self.api_url = f"https://api.telegram.org/bot{self.token}"
+
+    def get_store(self, read_only: bool = True) -> DomainStore:
+        """Returns a store instance."""
+        return DomainStore(read_only=read_only)
 
     def send_message(self, chat_id: int, text: str, reply_markup: Optional[Dict] = None) -> None:
         """Sends a message to a specific chat."""
@@ -72,8 +75,9 @@ class TelegramBotDaemon:
 
     def handle_command_top(self, chat_id: int) -> None:
         """Handles /top or refresh button."""
-        top_ai = self.store.query_top_alpha(limit=5, category="AI", min_score=60.0)
-        top_fintech = self.store.query_top_alpha(limit=5, category="Fintech", min_score=60.0)
+        store = self.get_store(read_only=True)
+        top_ai = store.query_top_alpha(limit=5, category="AI", min_score=60.0)
+        top_fintech = store.query_top_alpha(limit=5, category="Fintech", min_score=60.0)
 
         msg = format_telegram_message(top_ai, top_fintech)
         kb = build_inline_keyboard(top_ai, top_fintech)
@@ -81,7 +85,8 @@ class TelegramBotDaemon:
 
     def handle_command_watchlist(self, chat_id: int) -> None:
         """Handles /watchlist."""
-        items = self.store.get_watchlist()
+        store = self.get_store(read_only=True)
+        items = store.get_watchlist()
         if not items:
             self.send_message(
                 chat_id,
@@ -127,7 +132,8 @@ class TelegramBotDaemon:
 
         if data.startswith("watch:"):
             domain = data.split("watch:", 1)[1]
-            self.store.add_to_watchlist(
+            store = self.get_store(read_only=False)
+            store.add_to_watchlist(
                 domain_name=domain,
                 notes="Bookmarked via Telegram Bot",
                 max_bid=50.0
