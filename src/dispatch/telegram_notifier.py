@@ -25,11 +25,25 @@ def load_env_file():
                 if key and key not in os.environ:
                     os.environ[key] = val
 
+def get_registrar_urls(domain: str) -> Dict[str, str]:
+    """Builds registrar lookup URLs with optional affiliate tracking parameters."""
+    nc_prefix = os.getenv("NAMECHEAP_AFFILIATE_PREFIX", "").strip()
+    dyn_affid = os.getenv("DYNADOT_AFFILIATE_ID", "").strip()
+
+    nc_base = f"https://www.namecheap.com/domains/registration/results/?domain={domain}"
+    nc_url = f"{nc_prefix}{nc_base}" if nc_prefix else nc_base
+
+    if dyn_affid:
+        dyn_url = f"https://www.dynadot.com/domain/search.html?domain={domain}&affid={dyn_affid}"
+    else:
+        dyn_url = f"https://www.dynadot.com/domain/search.html?domain={domain}"
+
+    return {"namecheap": nc_url, "dynadot": dyn_url}
+
 def build_registrar_links(domain: str) -> str:
-    """Generates direct 1-click registration/lookup links."""
-    namecheap_url = f"https://www.namecheap.com/domains/registration/results/?domain={domain}"
-    dynadot_url = f"https://www.dynadot.com/domain/search.html?domain={domain}"
-    return f"[Namecheap]({namecheap_url}) • [Dynadot]({dynadot_url})"
+    """Generates direct 1-click registration/lookup links with affiliate support."""
+    urls = get_registrar_urls(domain)
+    return f"[Namecheap]({urls['namecheap']}) • [Dynadot]({urls['dynadot']})"
 
 def build_due_diligence_links(domain: str) -> str:
     """Generates direct 1-click audit links for historical spam, Wayback archives, and Google Index status."""
@@ -50,7 +64,7 @@ def build_inline_keyboard(
     if ai_domains:
         d = ai_domains[0]
         name = d.get("domain_name", "")
-        bid_url = f"https://www.namecheap.com/domains/registration/results/?domain={name}"
+        bid_url = get_registrar_urls(name)["namecheap"]
         keyboard.append([
             {"text": f"⚡ Bid {name}", "url": bid_url},
             {"text": f"⭐ Save {name}", "callback_data": f"watch:{name}"}
@@ -60,7 +74,7 @@ def build_inline_keyboard(
     if fintech_domains:
         d = fintech_domains[0]
         name = d.get("domain_name", "")
-        bid_url = f"https://www.namecheap.com/domains/registration/results/?domain={name}"
+        bid_url = get_registrar_urls(name)["namecheap"]
         keyboard.append([
             {"text": f"💳 Bid {name}", "url": bid_url},
             {"text": f"⭐ Save {name}", "callback_data": f"watch:{name}"}
@@ -70,7 +84,7 @@ def build_inline_keyboard(
     if len(ai_domains) > 1:
         d = ai_domains[1]
         name = d.get("domain_name", "")
-        bid_url = f"https://www.namecheap.com/domains/registration/results/?domain={name}"
+        bid_url = get_registrar_urls(name)["namecheap"]
         keyboard.append([
             {"text": f"🤖 Bid {name}", "url": bid_url},
             {"text": f"⭐ Save {name}", "callback_data": f"watch:{name}"}
@@ -80,7 +94,7 @@ def build_inline_keyboard(
     if len(fintech_domains) > 1:
         d = fintech_domains[1]
         name = d.get("domain_name", "")
-        bid_url = f"https://www.namecheap.com/domains/registration/results/?domain={name}"
+        bid_url = get_registrar_urls(name)["namecheap"]
         keyboard.append([
             {"text": f"💎 Bid {name}", "url": bid_url},
             {"text": f"⭐ Save {name}", "callback_data": f"watch:{name}"}

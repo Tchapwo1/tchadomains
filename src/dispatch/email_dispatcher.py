@@ -40,6 +40,7 @@ def _render_domain_rows(domains: List[Dict[str, Any]]) -> str:
         """
 
     rows = []
+    from src.dispatch.telegram_notifier import get_registrar_urls
     for i, d in enumerate(domains, 1):
         name = d.get("domain_name", "")
         score = d.get("alpha_score", 0.0)
@@ -52,7 +53,7 @@ def _render_domain_rows(domains: List[Dict[str, Any]]) -> str:
         else:
             words = words.replace(",", " + ")
 
-        lookup_url = f"https://www.namecheap.com/domains/registration/results/?domain={name}"
+        lookup_url = get_registrar_urls(name)["namecheap"]
 
         # High score styling
         score_color = "#a3e635" if score >= 85.0 else "#38bdf8"
