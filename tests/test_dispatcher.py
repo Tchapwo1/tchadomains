@@ -101,6 +101,10 @@ def test_telegram_message_formatting(sample_ai_domains, sample_fintech_domains):
     assert "namecheap.com/domains/registration/results/?domain=agentflow.com" in msg
     assert "dynadot.com/domain/search.html?domain=payvault.com" in msg
 
+    # Verify Pillar 5 Due Diligence audit links
+    assert "web.archive.org/web/*/agentflow.com" in msg
+    assert "google.com/search?q=site:payvault.com" in msg
+
 def test_telegram_send_dry_run():
     res = send_telegram_alert("Test alert message", dry_run=True)
     assert res["channel"] == "telegram"

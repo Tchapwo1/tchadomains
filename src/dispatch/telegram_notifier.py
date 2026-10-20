@@ -31,6 +31,12 @@ def build_registrar_links(domain: str) -> str:
     dynadot_url = f"https://www.dynadot.com/domain/search.html?domain={domain}"
     return f"[Namecheap]({namecheap_url}) • [Dynadot]({dynadot_url})"
 
+def build_due_diligence_links(domain: str) -> str:
+    """Generates direct 1-click audit links for historical spam, Wayback archives, and Google Index status."""
+    wayback_url = f"https://web.archive.org/web/*/{domain}"
+    google_url = f"https://www.google.com/search?q=site:{domain}"
+    return f"[Wayback Archive]({wayback_url}) • [Google Index]({google_url})"
+
 def build_inline_keyboard(
     ai_domains: List[Dict[str, Any]],
     fintech_domains: List[Dict[str, Any]]
@@ -126,9 +132,11 @@ def format_telegram_message(
                 words = words.replace(",", " + ")
 
             links = build_registrar_links(name)
+            audit = build_due_diligence_links(name)
             lines.append(f"*{i}.* `{name}` — *[{score:.1f}/100]*")
             lines.append(f"   ↳ {chars} chars | Structure: _{words}_")
             lines.append(f"   ↳ Quick Bid: {links}")
+            lines.append(f"   ↳ Audit: {audit}")
             lines.append("")
 
     lines.extend([
@@ -153,9 +161,11 @@ def format_telegram_message(
                 words = words.replace(",", " + ")
 
             links = build_registrar_links(name)
+            audit = build_due_diligence_links(name)
             lines.append(f"*{i}.* `{name}` — *[{score:.1f}/100]*")
             lines.append(f"   ↳ {chars} chars | Structure: _{words}_")
             lines.append(f"   ↳ Quick Bid: {links}")
+            lines.append(f"   ↳ Audit: {audit}")
             lines.append("")
 
     lines.extend([

@@ -25,6 +25,11 @@ def test_filter_engine_rejections(filter_engine):
     assert filter_engine.is_candidate("superlongdomainnameexceedinglength.com")[0] is False
     assert filter_engine.is_candidate("aaabbbccc.com")[0] is False
     assert filter_engine.is_candidate("ab.com")[0] is False  # too short (<3)
+    # Pillar 4: Trademark rejections
+    assert filter_engine.is_candidate("chatgptbot.com")[0] is False
+    assert filter_engine.is_candidate("stripepay.com")[0] is False
+    assert filter_engine.is_candidate("openainode.com")[0] is False
+    assert filter_engine.is_candidate("googlecloud.com")[0] is False
 
 def test_filter_engine_acceptance(filter_engine):
     assert filter_engine.is_candidate("payflow.com")[0] is True

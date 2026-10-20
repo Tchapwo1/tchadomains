@@ -15,11 +15,21 @@ HYPHEN_PATTERN = re.compile(r"-")
 CONSECUTIVE_REPEAT = re.compile(r"([a-z])\1{2,}")
 INVALID_CHARS = re.compile(r"[^a-z0-9\.-]")
 
+# High-liability registered corporate trademarks (Pillar 4: Zero Trademark Infringement)
+HIGH_RISK_TRADEMARKS = {
+    "openai", "chatgpt", "google", "apple", "microsoft", "amazon", "meta",
+    "facebook", "instagram", "whatsapp", "twitter", "netflix", "tiktok",
+    "tesla", "paypal", "stripe", "visa", "mastercard", "uber", "airbnb",
+    "spotify", "shopify", "slack", "github", "reddit", "anthropic", "claude",
+    "deepmind", "salesforce", "oracle", "adobe"
+}
+
 class FilterEngine:
-    def __init__(self, max_length: int = 10, min_length: int = 3, allowed_tlds: set = None):
+    def __init__(self, max_length: int = 10, min_length: int = 3, allowed_tlds: set = None, trademarks: set = None):
         self.max_length = max_length
         self.min_length = min_length
         self.allowed_tlds = allowed_tlds or ALLOWED_TLDS
+        self.trademarks = trademarks or HIGH_RISK_TRADEMARKS
 
     def parse_domain(self, domain: str) -> Optional[Tuple[str, str]]:
         """Splits domain into (sld, tld). E.g. 'cloudpulse.com' -> ('cloudpulse', 'com')"""
@@ -62,5 +72,13 @@ class FilterEngine:
 
         if CONSECUTIVE_REPEAT.search(sld):
             return False, "EXCESSIVE_REPEATED_LETTERS"
+
+        # Pillar 4: Zero Trademark Infringement Filter
+        for tm in self.trademarks:
+            if sld == tm:
+                return False, f"TRADEMARK_RISK_{tm.upper()}"
+            # Catch compound infringement: e.g. 'stripepay', 'openainode', 'chatgptbot'
+            if len(tm) >= 4 and (sld.startswith(tm) or sld.endswith(tm)):
+                return False, f"TRADEMARK_RISK_{tm.upper()}"
 
         return True, "PASSED"
